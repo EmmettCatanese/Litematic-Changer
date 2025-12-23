@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Litematica Block Replacer</title>
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f4f4;
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff; 
+            padding: 30px;
+            border: 1px solid #ddd; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); 
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+
+        .upload-section {
+            background: #fafafa;
+            border: 2px dashed #cccccc;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-section.dragover {
+            border-color: #333333;
+            background: #e9e9e9;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-button {
+            background: #555555;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        
+        .upload-button:hover {
+            background: #333333;
+        }
+
+        .file-info, .error, .success {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .file-info {
+            background: #eef2f7;
+            border-color: #b0c4de;
+        }
+
+        .error {
+            background: #fbeae9;
+            color: #a94442;
+            border-color: #d9a09c;
+        }
+
+        .success {
+            background: #e9f5e9;
+            color: #3c763d;
+            border-color: #9ec89e;
+        }
+
+        .replacement-section {
+            display: none;
+            background: #fdfdfd;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .blocks-found {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .block-item {
+            font-family: monospace;
+            font-size: 0.9em;
+            padding: 2px 0;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .block-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+
+        .replacement-pair {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .replacement-pair:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .input-group {
+            flex-grow: 1;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+            background: #fff;
+            color: #333;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #333333;
+            box-shadow: 0 0 0 1px #333333;
+        }
+
+        .example-text {
+            font-size: 0.9em;
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        .action-button, .replace-button, .download-button {
+            background: #333333; 
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            width: 100%;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .action-button:hover, .replace-button:hover, .download-button:hover {
+            background: #1a1a1a; 
+        }
+
+        .replace-button:disabled {
+            background: #999999;
+            color: #dedede;
+            cursor: not-allowed;
+        }
+        
+        .add-pair-btn {
+            background: #666666;
+            padding: 12px 20px;
+            font-size: 1em;
+        }
+        .add-pair-btn:hover {
+            background: #555555;
+        }
+
+        .remove-pair-btn {
+            background: #888888;
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            font-weight: bold;
+            font-size: 1.5em;
+            line-height: 44px;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 28px;
+        }
+        
+        .remove-pair-btn:hover {
+            background: #666666;
+        }
+
+        .download-section {
+            display: none;
+            text-align: center;
+            padding: 25px;
+            background: #f0fff0;
+            border: 1px solid #9ec89e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Litematica Block Replacer</h1>
+        
+        <div class="upload-section" id="uploadSection">
+            <h3>Upload Litematica File</h3>
+            <p>Drag and drop your .litematic file here or click to browse</p>
+            <input type="file" id="fileInput" accept=".litematic">
+            <button class="upload-button" onclick="document.getElementById('fileInput').click()">
+                Choose File
+            </button>
+        </div>
+
+        <div id="fileInfo" class="file-info" style="display: none;"></div>
+        <div id="errorDiv" class="error" style="display: none;"></div>
+        <div id="successDiv" class="success" style="display: none;"></div>
+
+        <div id="replacementSection" class="replacement-section">
+            <h3>Blocks Found in Schematic:</h3>
+            <div id="blocksFound" class="blocks-found"></div>
+            
+            <h3>Define Replacement Rules</h3>
+            <p>Define one or more replacement rules. Click on blocks above to auto-fill the first 'From' field. The replacement will preserve all block properties. For the "from" block, you will get best results when inputting the whole block name. However, partial portions of the name can also work. For example, you can put in "polished_stone" and then  replace </p>
+            
+            <div id="replacementPairsContainer" style="margin-top: 20px;">
+                <div class="replacement-pair">
+                    <div class="input-group">
+                        <label>From (block to replace):</label>
+                        <input type="text" class="from-block-input" placeholder="smooth_stone">
+                    </div>
+                    <div class="input-group">
+                        <label>To (replace with):</label>
+                        <input type="text" class="to-block-input" placeholder="quartz">
+                    </div>
+                    <button class="remove-pair-btn" onclick="removeReplacementPair(this)">×</button>
+                </div>
+            </div>
+
+            <button id="addPairBtn" class="action-button add-pair-btn">
+                + Add Another Replacement Rule
+            </button>
+
+            <button class="replace-button" id="replaceBtn" onclick="performReplacement()">
+                Replace All
+            </button>
+        </div>
+
+        <div id="downloadSection" class="download-section">
+            <h3>✅ Replacement Complete!</h3>
+            <p id="replacementResult"></p>
+            <button class="download-button" onclick="downloadFile()">Download Modified File</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+    <script>
+        // Global state variables
+        let nbtData = null;
+        let modifiedNbtData = null;
+        let originalFileName = '';
+        let foundBlocks = new Set();
+        let replacementCount = 0;
+
+        // Drag and Drop Setup
+        const uploadSection = document.getElementById('uploadSection');
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        document.getElementById('addPairBtn').addEventListener('click', addReplacementPair);
+
+        // UI Functions
+        function fillFromBlock(blockName) {
+            const cleanName = blockName.replace('minecraft:', '');
+            const fromInputs = document.querySelectorAll('.from-block-input');
+            let targetInput = Array.from(fromInputs).find(input => input.value === '') || fromInputs[0];
+            if (targetInput) {
+                targetInput.value = cleanName;
+            }
+        }
+
+        function addReplacementPair() {
+            const container = document.getElementById('replacementPairsContainer');
+            const firstPair = container.querySelector('.replacement-pair');
+            if (firstPair) {
+                const newPair = firstPair.cloneNode(true);
+                newPair.querySelector('.from-block-input').value = '';
+                newPair.querySelector('.to-block-input').value = '';
+                container.appendChild(newPair);
+            }
+        }
+        
+        function removeReplacementPair(button) {
+            const container = document.getElementById('replacementPairsContainer');
+            // Prevent removing the last one
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+            } else {
+                showError("You can't remove the last replacement rule.");
+            }
+        }
+
+        // Core File Handling
+        async function handleFile(file) {
+            if (!file.name.endsWith('.litematic')) {
+                showError('Please select a .litematic file');
+                return;
+            }
+            originalFileName = file.name;
+            
+            try {
+                showSuccess('Processing file...');
+                const arrayBuffer = await file.arrayBuffer();
+                const compressed = new Uint8Array(arrayBuffer);
+                const decompressed = pako.ungzip(compressed);
+                
+                nbtData = parseNBT(decompressed);
+                
+                foundBlocks.clear();
+                extractBlocks(nbtData);
+                
+                document.getElementById('fileInfo').innerHTML = `
+                    <strong>File:</strong> ${file.name}<br>
+                    <strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB<br>
+                    <strong>Status:</strong> ✅ Successfully parsed NBT data<br>
+                    <strong>Blocks found:</strong> ${foundBlocks.size} unique types
+                `;
+                document.getElementById('fileInfo').style.display = 'block';
+                
+                const blocksDiv = document.getElementById('blocksFound');
+                blocksDiv.innerHTML = Array.from(foundBlocks).sort().map(block => 
+                    `<div class="block-item" onclick="fillFromBlock('${block}')">${block}</div>`
+                ).join('');
+                
+                document.getElementById('replacementSection').style.display = 'block';
+                document.getElementById('downloadSection').style.display = 'none';
+                hideMessages();
+                
+            } catch (error) {
+                console.error('Error processing file:', error);
+                showError('Error reading file: ' + error.message + '. The file might be corrupt or in an unexpected format.');
+            }
+        }
+
+        // NBT Parsing Logic
+        function parseNBT(data) {
+            let pos = 0;
+            function read(len) {
+                if (pos + len > data.length) throw new Error('Unexpected end of data');
+                const slice = data.slice(pos, pos + len);
+                pos += len;
+                return slice;
+            }
+            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            function readByte() { return view.getInt8(pos++); }
+            function readShort() { const val = view.getInt16(pos); pos += 2; return val; }
+            function readInt() { const val = view.getInt32(pos); pos += 4; return val; }
+            function readFloat() { const val = view.getFloat32(pos); pos += 4; return val; }
+            function readDouble() { const val = view.getFloat64(pos); pos += 8; return val; }
+            function readLong() { const high = readInt(); const low = readInt(); return { high, low }; }
+            function readString() { const length = readShort(); const bytes = read(length); return new TextDecoder('utf-8').decode(bytes); }
+            function readByteArray() { return read(readInt()); }
+            function readIntArray() { const length = readInt(); const array = []; for (let i = 0; i < length; i++) array.push(readInt()); return array; }
+            function readLongArray() { const length = readInt(); const array = []; for (let i = 0; i < length; i++) array.push(readLong()); return array; }
+            function parseTag() {
+                const type = readByte();
+                if (type === 0) return { type: 0, name: '', value: null };
+                const name = readString();
+                const value = readValue(type);
+                return { type, name, value };
+            }
+            function readValue(type) {
+                switch (type) {
+                    case 1: return readByte();
+                    case 2: return readShort();
+                    case 3: return readInt();
+                    case 4: return readLong();
+                    case 5: return readFloat();
+                    case 6: return readDouble();
+                    case 7: return readByteArray();
+                    case 8: return readString();
+                    case 9:
+                        const listType = readByte();
+                        const listLength = readInt();
+                        const list = [];
+                        for (let i = 0; i < listLength; i++) {
+                            list.push({ type: listType, name: '', value: readValue(listType) });
+                        }
+                        return list;
+                    case 10:
+                        const compound = {};
+                        while (true) {
+                            const tag = parseTag();
+                            if (tag.type === 0) break;
+                            compound[tag.name] = tag;
+                        }
+                        return compound;
+                    case 11: return readIntArray();
+                    case 12: return readLongArray();
+                    default: throw new Error(`Unknown tag type: ${type}`);
+                }
+            }
+            return parseTag();
+        }
+
+        // Block Extraction and Replacement Logic
+        function extractBlocks(nbtTag) {
+            function searchForPalettes(tag) {
+                if (!tag || typeof tag !== 'object') return;
+                if (tag.type === 9 && Array.isArray(tag.value) && tag.value.length > 0 && tag.value[0].type === 10) {
+                    tag.value.forEach(item => {
+                        if (item.value && item.value.Name && item.value.Name.type === 8) {
+                            foundBlocks.add(item.value.Name.value);
+                        }
+                    });
+                }
+                if (tag.type === 10 && tag.value) { for (const key in tag.value) { searchForPalettes(tag.value[key]); } } 
+                else if (tag.type === 9 && Array.isArray(tag.value)) { tag.value.forEach(searchForPalettes); }
+            }
+            searchForPalettes(nbtTag);
+        }
+
+        function deepCloneNbt(tag) {
+            if (!tag || typeof tag !== 'object') return tag;
+            if (tag instanceof Uint8Array) return new Uint8Array(tag);
+            if (Array.isArray(tag)) return tag.map(item => deepCloneNbt(item));
+            const clone = {};
+            for (const key in tag) {
+                if (Object.prototype.hasOwnProperty.call(tag, key)) {
+                    clone[key] = deepCloneNbt(tag[key]);
+                }
+            }
+            return clone;
+        }
+
+        function traverseAndReplace(tag, from, to) {
+            if (!tag || typeof tag !== 'object') return;
+            if (tag.type === 8 && typeof tag.value === 'string') {
+                const lcValue = tag.value.toLowerCase();
+                if (lcValue.includes('minecraft:') && lcValue.includes(from)) {
+                    const parts = tag.value.split(':');
+                    const namespace = parts[0];
+                    const blockId = parts.slice(1).join(':');
+                    const newBlockId = blockId.replace(new RegExp(from, 'gi'), to);
+                    if (blockId !== newBlockId) {
+                        tag.value = `${namespace}:${newBlockId}`;
+                        replacementCount++;
+                    }
+                }
+            }
+            if (tag.value && typeof tag.value === 'object') {
+                if (tag.type === 10) { for (const key in tag.value) { traverseAndReplace(tag.value[key], from, to); } } 
+                else if (tag.type === 9) { tag.value.forEach(item => traverseAndReplace(item, from, to)); }
+            }
+        }
+        
+        function performReplacement() {
+            if (!nbtData) {
+                showError('No file loaded. Please upload a .litematic file first.');
+                return;
+            }
+
+            const replacementPairs = [];
+            const pairElements = document.querySelectorAll('#replacementPairsContainer .replacement-pair');
+            
+            pairElements.forEach(pairEl => {
+                const fromBlock = pairEl.querySelector('.from-block-input').value.trim().toLowerCase();
+                const toBlock = pairEl.querySelector('.to-block-input').value.trim().toLowerCase();
+                if (fromBlock && toBlock) {
+                    replacementPairs.push({ from: fromBlock, to: toBlock });
+                }
+            });
+
+            if (replacementPairs.length === 0) {
+                showError('Please define at least one valid replacement rule (both "From" and "To" fields must be filled).');
+                return;
+            }
+
+            const replaceBtn = document.getElementById('replaceBtn');
+            replaceBtn.disabled = true;
+            replaceBtn.textContent = 'Processing...';
+
+            try {
+                modifiedNbtData = deepCloneNbt(nbtData);
+                replacementCount = 0; 
+                
+                // Apply each replacement rule sequentially
+                replacementPairs.forEach(pair => {
+                    traverseAndReplace(modifiedNbtData, pair.from, pair.to);
+                });
+                
+                if (replacementCount > 0) {
+                    showSuccess(`Successfully processed ${replacementPairs.length} rule(s) and made ${replacementCount} block replacements.`);
+                    document.getElementById('replacementResult').textContent = 
+                        `Made ${replacementCount} block replacements. Your modified file is ready.`;
+                    document.getElementById('downloadSection').style.display = 'block';
+                } else {
+                    showError(`No blocks matching your rule(s) were found. No changes were made.`);
+                }
+                
+            } catch (error) {
+                showError('Error during replacement: ' + error.message);
+                console.error('Replacement error:', error);
+            } finally {
+                replaceBtn.disabled = false;
+                replaceBtn.textContent = 'Replace All';
+            }
+        }
+
+        // NBT Serialization and Download
+        function serializeNBT(nbtTag) {
+            const buffer = new ArrayBuffer(1024 * 1024 * 10); // 10MB buffer, safer
+            const view = new DataView(buffer);
+            let pos = 0;
+            function write(arr) { new Uint8Array(buffer, pos).set(arr); pos += arr.length; }
+            function writeByte(val) { view.setInt8(pos++, val); }
+            function writeShort(val) { view.setInt16(pos, val); pos += 2; }
+            function writeInt(val) { view.setInt32(pos, val); pos += 4; }
+            function writeFloat(val) { view.setFloat32(pos, val); pos += 4; }
+            function writeDouble(val) { view.setFloat64(pos, val); pos += 8; }
+            function writeLong(longObj) { writeInt(longObj.high); writeInt(longObj.low); }
+            function writeString(str) { const bytes = new TextEncoder().encode(str); writeShort(bytes.length); write(bytes); }
+            function writeByteArray(arr) { writeInt(arr.length); write(arr); }
+            function writeIntArray(arr) { writeInt(arr.length); arr.forEach(writeInt); }
+            function writeLongArray(arr) { writeInt(arr.length); arr.forEach(writeLong); }
+            function writeValue(type, value) {
+                switch (type) {
+                    case 1: writeByte(value); break;
+                    case 2: writeShort(value); break;
+                    case 3: writeInt(value); break;
+                    case 4: writeLong(value); break;
+                    case 5: writeFloat(value); break;
+                    case 6: writeDouble(value); break;
+                    case 7: writeByteArray(value); break;
+                    case 8: writeString(value); break;
+                    case 9:
+                        if (value.length === 0) { writeByte(0); writeInt(0); } 
+                        else { const listType = value[0].type; writeByte(listType); writeInt(value.length); value.forEach(item => writeValue(item.type, item.value)); }
+                        break;
+                    case 10: Object.values(value).forEach(writeTag); writeByte(0); break;
+                    case 11: writeIntArray(value); break;
+                    case 12: writeLongArray(value); break;
+                }
+            }
+            function writeTag(tag) {
+                writeByte(tag.type);
+                if (tag.type !== 0) { writeString(tag.name); writeValue(tag.type, tag.value); }
+            }
+            writeTag(nbtTag);
+            return new Uint8Array(buffer, 0, pos);
+        }
+
+        function downloadFile() {
+            if (!modifiedNbtData) {
+                showError('No modified data available to download.');
+                return;
+            }
+            try {
+                const nbtBytes = serializeNBT(modifiedNbtData);
+                const compressed = pako.gzip(nbtBytes);
+                const blob = new Blob([compressed], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = originalFileName.replace('.litematic', '_modified.litematic');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showSuccess('File download initiated!');
+            } catch (error) {
+                showError('Error creating download: ' + error.message);
+                console.error('Download error:', error);
+            }
+        }
+
+        // UI Feedback Functions
+        function showError(message) {
+            document.getElementById('errorDiv').textContent = `❌ ${message}`;
+            document.getElementById('errorDiv').style.display = 'block';
+            document.getElementById('successDiv').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            document.getElementById('successDiv').textContent = `✔️ ${message}`;
+            document.getElementById('successDiv').style.display = 'block';
+            document.getElementById('errorDiv').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorDiv').style.display = 'none';
+            document.getElementById('successDiv').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
